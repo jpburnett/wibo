@@ -11,6 +11,9 @@
 #include <charconv>
 #include <fcntl.h>
 
+#include "log.hpp"
+#include "wibo_opts.hpp"
+
 uint32_t wibo::lastError = 0;
 char** wibo::argv;
 int wibo::argc;
@@ -324,11 +327,6 @@ static void blockUpper2GB() {
 }
 
 int main(int argc, char **argv) {
-	if (argc <= 1) {
-		printf("Usage: ./wibo program.exe ...\n");
-		return 1;
-	}
-
 	if (getenv("WIBO_DEBUG")) {
 		wibo::debugEnabled = true;
 	}
@@ -362,76 +360,87 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	// Build a command line
-	std::string cmdLine;
-	for (int i = 1; i < argc; i++) {
-		std::string arg;
-		if (i == 1) {
-			arg = files::pathToWindows(std::filesystem::absolute(argv[1]));
-		} else {
-			cmdLine += ' ';
-			arg = argv[i];
-		}
-		bool needQuotes = arg.find_first_of("\\\" \t\n") != std::string::npos;
-		if (needQuotes)
-			cmdLine += '"';
-		int backslashes = 0;
-		for (const char *p = arg.c_str(); ; p++) {
-			char c = *p;
-			if (c == '\\') {
-				backslashes++;
-				continue;
-			}
+    WiboOpts *wopts = WiboOpts::get_instance();
+    error_t err = wopts->parse_arguments(argc, argv);
+    if (err) {
+		perror("Error parsing arguments");
+        return err;
+    }
 
-			// Backslashes are doubled *before quotes*
-			for (int j = 0; j < backslashes; j++) {
-				cmdLine += '\\';
-				if (c == '\0' || c == '"')
-					cmdLine += '\\';
-			}
-			backslashes = 0;
+	// // Build a command line
+	// std::string cmdLine;
+	// for (int i = 1; i < argc; i++) {
+	// 	std::string arg;
+	// 	if (i == 1) {
+	// 		arg = files::pathToWindows(std::filesystem::absolute(argv[1]));
+	// 	} else {
+	// 		cmdLine += ' ';
+	// 		arg = argv[i];
+	// 	}
+	// 	bool needQuotes = arg.find_first_of("\\\" \t\n") != std::string::npos;
+	// 	if (needQuotes)
+	// 		cmdLine += '"';
+	// 	int backslashes = 0;
+	// 	for (const char *p = arg.c_str(); ; p++) {
+	// 		char c = *p;
+	// 		if (c == '\\') {
+	// 			backslashes++;
+	// 			continue;
+	// 		}
 
-			if (c == '\0')
-				break;
-			if (c == '\"')
-				cmdLine += '\\';
-			cmdLine += c;
-		}
-		if (needQuotes)
-			cmdLine += '"';
-	}
-	cmdLine += '\0';
+	// 		// Backslashes are doubled *before quotes*
+	// 		for (int j = 0; j < backslashes; j++) {
+	// 			cmdLine += '\\';
+	// 			if (c == '\0' || c == '"')
+	// 				cmdLine += '\\';
+	// 		}
+	// 		backslashes = 0;
 
-	wibo::commandLine = cmdLine.data();
-	wibo::commandLineW = stringToWideString(wibo::commandLine);
-	DEBUG_LOG("Command line: %s\n", wibo::commandLine);
+	// 		if (c == '\0')
+	// 			break;
+	// 		if (c == '\"')
+	// 			cmdLine += '\\';
+	// 		cmdLine += c;
+	// 	}
+	// 	if (needQuotes)
+	// 		cmdLine += '"';
+	// }
+	// cmdLine += '\0';
 
-	wibo::executableName = argv[0];
-	wibo::argv = argv + 1;
-	wibo::argc = argc - 1;
+	// wibo::commandLine = cmdLine.data();
+	// wibo::commandLineW = stringToWideString(wibo::commandLine);
+	// DEBUG_LOG("Command line: %s\n", wibo::commandLine);
+
+	DEBUG_LOG("Command line: %s\n", wopts->pe_path.c_str());
+
+	// wibo::executableName = argv[0];
+	wibo::executableName = wopts->pe_name.data();
+	// wibo::argv = argv + 1;
+	// wibo::argc = argc - 1;
+
 
 	wibo::Executable exec;
 	wibo::mainModule = &exec;
 
-	char* pe_path = argv[1];
-	FILE *f = fopen(pe_path, "rb");
-	if (!f) {
-		std::string mesg = std::string("Failed to open file ") + pe_path;
-		perror(mesg.c_str());
-		return 1;
-	}
+	// char* pe_path = argv[1];
+	// FILE *f = fopen(pe_path, "rb");
+	// if (!f) {
+	// 	std::string mesg = std::string("Failed to open file ") + pe_path;
+	// 	perror(mesg.c_str());
+	// 	return 1;
+	// }
 
-	exec.loadPE(f, true);
-	fclose(f);
+	// exec.loadPE(f, true);
+	// fclose(f);
 
-	uint16_t tibSegment = (tibDesc.entry_number << 3) | 7;
-	// Invoke the damn thing
-	asm(
-		"movw %0, %%fs; call *%1"
-		:
-		: "r"(tibSegment), "r"(exec.entryPoint)
-	);
-	DEBUG_LOG("We came back\n");
+	// uint16_t tibSegment = (tibDesc.entry_number << 3) | 7;
+	// // Invoke the damn thing
+	// asm(
+	// 	"movw %0, %%fs; call *%1"
+	// 	:
+	// 	: "r"(tibSegment), "r"(exec.entryPoint)
+	// );
+	// DEBUG_LOG("We came back\n");
 
 	return 1;
 }

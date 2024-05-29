@@ -34,6 +34,7 @@ add_executable(wibo
     main.cpp
     processes.cpp
     strutil.cpp
+    wibo_opts.cpp
 )
 target_link_libraries(wibo PRIVATE std::filesystem)
 install(TARGETS wibo DESTINATION bin)
