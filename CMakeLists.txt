@@ -1,21 +1,25 @@
 cmake_minimum_required(VERSION 3.13)
+project(wibo LANGUAGES CXX)
+
+# Specify the C++ standard
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug" CACHE STRING
         "Build type options: Debug Release RelWithDebInfo MinSizeRel" FORCE)
 endif()
 
-project(wibo LANGUAGES CXX)
-
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 find_package(Filesystem REQUIRED)
 
-set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32 -Wall -fno-pie -no-pie -D_LARGEFILE64_SOURCE")
 
 include_directories(.)
-add_executable(wibo
+
+# Add the source files
+set(SOURCES
     dll/advapi32.cpp
     dll/bcrypt.cpp
     dll/crt.cpp
@@ -36,5 +40,9 @@ add_executable(wibo
     strutil.cpp
     wibo_opts.cpp
 )
+
+# Add executable for the project
+add_executable(wibo ${SOURCES})
+
 target_link_libraries(wibo PRIVATE std::filesystem)
 install(TARGETS wibo DESTINATION bin)
